@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Conversation;
+use App\Models\Message;
 use App\Services\UXAgent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use RuntimeException;
+use Throwable;
 
 class ChatController extends Controller
 {
@@ -25,19 +28,64 @@ class ChatController extends Controller
     }
 
     /**
+     * List every stored conversation with its own cost.
+     */
+    public function history(): JsonResponse
+    {
+        try {
+            $conversations = Conversation::with('messages')->latest('updated_at')->get();
+        } catch (Throwable) {
+            return response()->json(['ok' => false]);
+        }
+
+        $chats = $conversations->map(function (Conversation $conversation) {
+            return $this->present($conversation) + [
+                'messages' => $conversation->messages->map(fn (Message $message) => [
+                    'role' => $message->role,
+                    'content' => $message->content,
+                    'at' => $message->created_at?->toIso8601String(),
+                ])->all(),
+            ];
+        })->all();
+
+        return response()->json([
+            'ok' => true,
+            'chats' => $chats,
+        ]);
+    }
+
+    /**
      * Accept a user message, ask the agent for the next question, return it.
      */
     public function send(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:20000'],
+            'conversation_id' => ['nullable', 'integer'],
         ]);
 
-        $history = $this->history($request);
-        $history[] = [
-            'role' => 'user',
-            'content' => $validated['message'],
-        ];
+        $message = $validated['message'];
+        $conversation = null;
+
+        try {
+            $conversation = $this->conversation($validated['conversation_id'] ?? null);
+        } catch (Throwable) {
+            $conversation = null;
+        }
+
+        if ($conversation === null) {
+            $history = $this->sessionHistory($request);
+            $history[] = ['role' => 'user', 'content' => $message];
+        } else {
+            try {
+                $conversation->messages()->create(['role' => 'user', 'content' => $message]);
+                $history = $this->agentHistory($conversation);
+            } catch (Throwable) {
+                $conversation = null;
+                $history = $this->sessionHistory($request);
+                $history[] = ['role' => 'user', 'content' => $message];
+            }
+        }
 
         try {
             $reply = $this->agent->reply($history);
@@ -48,17 +96,39 @@ class ChatController extends Controller
             ], 502);
         }
 
-        $history[] = [
-            'role' => 'assistant',
-            'content' => $reply,
-        ];
+        if ($conversation === null) {
+            $history[] = ['role' => 'assistant', 'content' => $reply];
+            $request->session()->put(self::SESSION_KEY, $history);
 
-        $request->session()->put(self::SESSION_KEY, $history);
+            return response()->json([
+                'ok' => true,
+                'reply' => $reply,
+                'cost' => $this->agent->cost(),
+            ]);
+        }
+
+        try {
+            $conversation->messages()->create(['role' => 'assistant', 'content' => $reply]);
+
+            if ($conversation->title === null) {
+                $conversation->title = mb_substr(trim($message), 0, 80);
+            }
+        } catch (Throwable) {
+            return response()->json([
+                'ok' => true,
+                'reply' => $reply,
+                'cost' => $this->agent->cost(),
+                'conversation' => null,
+            ]);
+        }
+
+        $stored = $this->recordCost($conversation);
 
         return response()->json([
             'ok' => true,
             'reply' => $reply,
             'cost' => $this->agent->cost(),
+            'conversation' => $stored ? $this->present($conversation) : null,
         ]);
     }
 
@@ -67,7 +137,22 @@ class ChatController extends Controller
      */
     public function finalize(Request $request): JsonResponse
     {
-        $history = $this->history($request);
+        $validated = $request->validate([
+            'conversation_id' => ['nullable', 'integer'],
+        ]);
+
+        $conversation = null;
+
+        try {
+            $id = $validated['conversation_id'] ?? null;
+            $conversation = $id === null ? null : Conversation::find($id);
+        } catch (Throwable) {
+            $conversation = null;
+        }
+
+        $history = $conversation === null
+            ? $this->sessionHistory($request)
+            : $this->agentHistory($conversation);
 
         if (count($history) === 0) {
             return response()->json([
@@ -85,10 +170,13 @@ class ChatController extends Controller
             ], 502);
         }
 
+        $stored = $this->recordCost($conversation);
+
         return response()->json([
             'ok' => true,
             'document' => $document,
             'cost' => $this->agent->cost(),
+            'conversation' => $stored ? $this->present($conversation) : null,
         ]);
     }
 
@@ -103,9 +191,73 @@ class ChatController extends Controller
     }
 
     /**
+     * Find the requested conversation or start a new one.
+     */
+    private function conversation(?int $id): Conversation
+    {
+        if ($id !== null) {
+            $conversation = Conversation::find($id);
+            if ($conversation !== null) {
+                return $conversation;
+            }
+        }
+
+        return Conversation::create();
+    }
+
+    /**
+     * Add the cost of the last call to the conversation total.
+     */
+    private function recordCost(?Conversation $conversation): bool
+    {
+        if ($conversation === null) {
+            return false;
+        }
+
+        try {
+            $cost = $this->agent->cost();
+            $conversation->cost = (float) $conversation->cost + (is_numeric($cost) ? (float) $cost : 0.0);
+            $conversation->updated_at = now();
+            $conversation->save();
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function present(Conversation $conversation): array
+    {
+        return [
+            'id' => $conversation->id,
+            'title' => $conversation->title,
+            'cost' => (float) $conversation->cost,
+            'updated_at' => $conversation->updated_at?->toIso8601String(),
+        ];
+    }
+
+    /**
      * @return array<int, array{role: string, content: string}>
      */
-    private function history(Request $request): array
+    private function agentHistory(Conversation $conversation): array
+    {
+        return $conversation->messages()
+            ->orderBy('id')
+            ->get(['role', 'content'])
+            ->map(fn (Message $message) => [
+                'role' => $message->role,
+                'content' => $message->content,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{role: string, content: string}>
+     */
+    private function sessionHistory(Request $request): array
     {
         $history = $request->session()->get(self::SESSION_KEY, []);
 

@@ -831,6 +831,87 @@
     .toast.ok { border-color: color-mix(in srgb, var(--ok) 55%, transparent); }
     .toast.err { border-color: color-mix(in srgb, var(--danger) 55%, transparent); color: var(--danger); }
 
+    /* ------------------------------------------------------------- history */
+
+    .history {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 300px;
+        max-width: 88vw;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 16px 14px;
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+        box-shadow: var(--shadow);
+        overflow-y: auto;
+        z-index: 40;
+    }
+
+    .history[hidden] { display: none; }
+
+    .history-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .history-heading {
+        font-size: 13px;
+        font-weight: 650;
+        letter-spacing: .2px;
+    }
+
+    .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .history-item {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+        width: 100%;
+        text-align: left;
+        padding: 9px 11px;
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+    }
+
+    .history-item[aria-current="true"] {
+        background: var(--accent-soft);
+        border-color: var(--line-strong);
+    }
+
+    .history-item-title {
+        font-size: 13px;
+        font-weight: 600;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .history-item-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--muted);
+    }
+
+    .history-empty {
+        font-size: 12px;
+        color: var(--muted);
+    }
+
+    .history-empty[hidden] { display: none; }
+
     /* ---------------------------------------------------------- responsive */
 
     @media (max-width: 720px) {
@@ -883,7 +964,13 @@
         </div>
 
         <div class="header-actions">
-            <span class="cost-pill" id="cost" title="Total spent so far (Toman)" aria-live="polite">0 تومان</span>
+            <button type="button" id="history-toggle" class="icon ghost" title="Chat history" aria-label="Chat history" aria-expanded="false" aria-controls="history">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 3V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </button>
+
+            <span class="cost-pill" id="cost" title="Spent in this chat (Toman)" aria-live="polite">0 تومان</span>
 
             <span class="status-pill" id="status" data-state="idle" role="status" aria-live="polite">
                 <span class="status-dot" aria-hidden="true"></span>
@@ -909,6 +996,19 @@
             </button>
         </div>
     </header>
+
+    <aside class="history" id="history" hidden aria-label="Chat history">
+        <div class="history-head">
+            <span class="history-heading">Chats</span>
+            <button type="button" id="history-close" class="icon ghost" title="Close chat history" aria-label="Close chat history">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="history-list" id="history-list"></div>
+        <div class="history-empty" id="history-empty" hidden>No saved chats yet.</div>
+    </aside>
 
     <div class="progress-track" id="progress-track" hidden aria-hidden="true">
         <div class="progress-bar" id="progress-bar"></div>
@@ -978,7 +1078,8 @@
     payload is not valid JSON, the client detects that and falls back to a fully
     self-contained demo agent so the interface stays usable.
 -->
-<script type="application/json" id="app-routes">@json(["send" => route("chat.send"), "finalize" => route("chat.finalize"), "reset" => route("chat.reset")])</script>
+@php($appRoutes = ["send" => route("chat.send"), "finalize" => route("chat.finalize"), "reset" => route("chat.reset"), "history" => route("chat.history")])
+<script type="application/json" id="app-routes">@json($appRoutes)</script>
 
 <script>
 (function () {
@@ -1012,7 +1113,7 @@
     var demoMode = forcedDemo || injectedRoutes === null;
 
     var ROUTES = demoMode
-        ? { send: '#demo/send', finalize: '#demo/finalize', reset: '#demo/reset' }
+        ? { send: '#demo/send', finalize: '#demo/finalize', reset: '#demo/reset', history: '#demo/history' }
         : injectedRoutes;
 
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -1042,6 +1143,11 @@
         status: document.getElementById('status'),
         statusText: document.getElementById('status-text'),
         cost: document.getElementById('cost'),
+        history: document.getElementById('history'),
+        historyToggle: document.getElementById('history-toggle'),
+        historyClose: document.getElementById('history-close'),
+        historyList: document.getElementById('history-list'),
+        historyEmpty: document.getElementById('history-empty'),
         progressTrack: document.getElementById('progress-track'),
         progressBar: document.getElementById('progress-bar'),
         chips: document.getElementById('chips'),
@@ -1055,7 +1161,9 @@
         finalizing: false,
         controller: null,
         started: false,
-        cost: 0
+        cost: 0,
+        chats: [],
+        chatId: null
     };
 
     var SUGGESTIONS = [
@@ -1383,42 +1491,265 @@
     });
 
     /* =====================================================================
-       Cost tracking
+       Chat history & cost
        ===================================================================== */
 
-    var COST_KEY = 'ux-agent-cost';
+    var CHATS_KEY = 'ux-agent-chats';
+    var CHAT_ID_KEY = 'ux-agent-chat-id';
 
-    function readCost() {
+    function readLocalChats() {
         var stored = null;
         try {
-            stored = window.localStorage.getItem(COST_KEY);
+            stored = window.localStorage.getItem(CHATS_KEY);
         } catch (err) {
             stored = null;
         }
-        var value = parseFloat(stored);
-        return isFinite(value) && value > 0 ? value : 0;
-    }
-
-    function renderCost() {
-        els.cost.textContent = state.cost.toFixed(2) + ' تومان';
-    }
-
-    function addCost(cost) {
-        var value = parseFloat(cost);
-        if (!isFinite(value) || value <= 0) {
-            return;
-        }
-        state.cost += value;
+        var parsed = null;
         try {
-            window.localStorage.setItem(COST_KEY, String(state.cost));
+            parsed = JSON.parse(stored);
+        } catch (err) {
+            parsed = null;
+        }
+        return Array.isArray(parsed) ? parsed : [];
+    }
+
+    function saveLocalChats() {
+        var local = state.chats.filter(function (chat) {
+            return chat.storage === 'local';
+        });
+        try {
+            window.localStorage.setItem(CHATS_KEY, JSON.stringify(local));
         } catch (err) {
             /* storage unavailable — ignore */
         }
-        renderCost();
     }
 
-    state.cost = readCost();
+    function readChatId() {
+        var stored = null;
+        try {
+            stored = window.localStorage.getItem(CHAT_ID_KEY);
+        } catch (err) {
+            stored = null;
+        }
+        if (!stored) {
+            return null;
+        }
+        var numeric = parseInt(stored, 10);
+        return isFinite(numeric) && String(numeric) === stored ? numeric : stored;
+    }
+
+    function setChatId(id) {
+        state.chatId = id === undefined ? null : id;
+        try {
+            window.localStorage.setItem(CHAT_ID_KEY, state.chatId === null ? '' : String(state.chatId));
+        } catch (err) {
+            /* storage unavailable — ignore */
+        }
+    }
+
+    function conversationId() {
+        return typeof state.chatId === 'number' ? state.chatId : null;
+    }
+
+    function findChat(id) {
+        for (var i = 0; i < state.chats.length; i++) {
+            if (state.chats[i].id === id) {
+                return state.chats[i];
+            }
+        }
+        return null;
+    }
+
+    function currentChat() {
+        return findChat(state.chatId);
+    }
+
+    function chatCost(chat) {
+        var cost = chat ? parseFloat(chat.cost) : 0;
+
+        return isFinite(cost) && cost > 0 ? cost : 0;
+    }
+
+    function chatTitle(chat) {
+        if (chat && typeof chat.title === 'string' && chat.title.trim() !== '') {
+            return chat.title.trim();
+        }
+
+        var messages = (chat && chat.messages) || [];
+        for (var i = 0; i < messages.length; i++) {
+            if (messages[i].role === 'user' && typeof messages[i].content === 'string') {
+                return messages[i].content.slice(0, 80);
+            }
+        }
+
+        return 'New chat';
+    }
+
+    function formatCost(cost) {
+        return cost.toFixed(2) + ' تومان';
+    }
+
+    function renderCost() {
+        state.cost = chatCost(currentChat());
+        els.cost.textContent = formatCost(state.cost);
+    }
+
+    function renderHistory() {
+        els.historyList.innerHTML = '';
+        els.historyEmpty.hidden = state.chats.length > 0;
+
+        state.chats.forEach(function (chat) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'history-item';
+            item.title = chatTitle(chat);
+            if (chat.id === state.chatId) {
+                item.setAttribute('aria-current', 'true');
+            }
+
+            var title = document.createElement('span');
+            title.className = 'history-item-title';
+            title.textContent = chatTitle(chat);
+
+            var meta = document.createElement('span');
+            meta.className = 'history-item-meta';
+
+            var cost = document.createElement('span');
+            cost.textContent = formatCost(chatCost(chat));
+
+            var count = document.createElement('span');
+            count.textContent = ((chat.messages || []).length) + ' پیام';
+
+            meta.appendChild(cost);
+            meta.appendChild(count);
+            item.appendChild(title);
+            item.appendChild(meta);
+            item.addEventListener('click', function () {
+                openChat(chat.id);
+            });
+
+            els.historyList.appendChild(item);
+        });
+    }
+
+    function toggleHistory(open) {
+        var next = typeof open === 'boolean' ? open : els.history.hidden;
+        els.history.hidden = !next;
+        els.historyToggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+    }
+
+    function openChat(id) {
+        var chat = findChat(id);
+        if (!chat) {
+            return;
+        }
+
+        setChatId(chat.id);
+        els.messages.innerHTML = '';
+        (chat.messages || []).forEach(function (message) {
+            addMessage(message.role, message.content, {
+                markdown: message.role === 'assistant',
+                time: message.at
+            });
+        });
+        hideChips();
+        setError('');
+        setStatus('Ready', 'idle');
+        renderCost();
+        renderHistory();
+        toggleHistory(false);
+        els.input.focus();
+    }
+
+    function syncCost(data) {
+        var conversation = data && data.conversation;
+
+        if (conversation && conversation.id) {
+            var chat = findChat(conversation.id);
+            if (chat !== null) {
+                var total = parseFloat(conversation.cost);
+                chat.cost = isFinite(total) ? total : chat.cost;
+                if (typeof conversation.title === 'string' && conversation.title !== '') {
+                    chat.title = conversation.title;
+                }
+            }
+        } else {
+            var current = currentChat();
+            var delta = data ? parseFloat(data.cost) : 0;
+            if (current !== null && isFinite(delta) && delta > 0) {
+                current.cost = chatCost(current) + delta;
+            }
+        }
+
+        saveLocalChats();
+        renderCost();
+        renderHistory();
+    }
+
+    function trackChat(data, question, reply) {
+        var conversation = data && data.conversation;
+        var stored = conversation && conversation.id ? conversation : null;
+        var chat = stored ? findChat(stored.id) : null;
+
+        if (chat === null) {
+            chat = {
+                id: stored ? stored.id : 'local-' + Date.now(),
+                storage: stored ? 'db' : 'local',
+                title: null,
+                cost: 0,
+                messages: []
+            };
+            state.chats.unshift(chat);
+        }
+
+        chat.messages = chat.messages || [];
+        chat.messages.push({ role: 'user', content: question });
+        chat.messages.push({ role: 'assistant', content: reply });
+
+        if (!chat.title) {
+            chat.title = question.slice(0, 80);
+        }
+
+        setChatId(chat.id);
+        syncCost(data);
+    }
+
+    function refreshHistory() {
+        if (demoMode) {
+            renderHistory();
+            return;
+        }
+
+        getJSON(ROUTES.history).then(function (data) {
+            if (!data || data.ok !== true || !Array.isArray(data.chats)) {
+                throw new Error('The server did not return a chat history.');
+            }
+
+            var local = state.chats.filter(function (chat) {
+                return chat.storage !== 'db';
+            });
+
+            state.chats = data.chats.concat(local);
+            renderHistory();
+            renderCost();
+        }).catch(function () {
+            renderHistory();
+            renderCost();
+        });
+    }
+
+    state.chats = readLocalChats();
+    setChatId(readChatId());
     renderCost();
+    renderHistory();
+
+    els.historyToggle.addEventListener('click', function () {
+        toggleHistory();
+    });
+
+    els.historyClose.addEventListener('click', function () {
+        toggleHistory(false);
+    });
 
     /* =====================================================================
        6. Toasts
@@ -1648,7 +1979,7 @@
         meta.className = 'meta';
 
         var time = document.createElement('span');
-        time.textContent = formatTime(new Date());
+        time.textContent = formatTime(opts.time ? new Date(opts.time) : new Date());
         meta.appendChild(time);
 
         if (role === 'assistant' && !opts.noTools) {
@@ -2011,6 +2342,22 @@
         return postJSON(ROUTES[kind], body, signal);
     }
 
+    function getJSON(url, signal) {
+        return fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            signal: signal
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('Request failed with status ' + response.status + '.');
+            }
+            return response.json();
+        });
+    }
+
     /* =====================================================================
        12. Composer behaviour
        ===================================================================== */
@@ -2072,7 +2419,7 @@
 
         var typing = addTyping('Thinking');
 
-        request('send', { message: text })
+        request('send', { message: text, conversation_id: conversationId() })
             .then(function (data) {
                 typing.remove();
                 var replyText = data && typeof data.reply === 'string' ? data.reply : '';
@@ -2080,7 +2427,7 @@
                     replyText = 'I did not receive a reply. Please try again.';
                 }
                 addMessage('assistant', replyText, { markdown: true });
-                addCost(data && data.cost);
+                trackChat(data, text, replyText);
                 setStatus('Ready', 'idle');
             })
             .catch(function (error) {
@@ -2125,7 +2472,7 @@
 
         var typing = addTyping('Writing the brief');
 
-        request('finalize', {})
+        request('finalize', { conversation_id: conversationId() })
             .then(function (data) {
                 typing.remove();
                 var documentText = data && typeof data.document === 'string' ? data.document : '';
@@ -2134,7 +2481,7 @@
                 }
                 var title = (data && typeof data.title === 'string' && data.title) ? data.title : 'UX Brief';
                 renderDocument(documentText, title);
-                addCost(data && data.cost);
+                syncCost(data);
                 setStatus('Done', 'idle');
                 toast('Brief generated', 'ok');
             })
@@ -2186,7 +2533,10 @@
         request('reset', {})
             .then(function () {
                 els.messages.innerHTML = '';
+                setChatId(null);
                 state.started = false;
+                renderCost();
+                renderHistory();
                 updateDemoProgress();
                 addMessage(
                     'assistant',
@@ -2269,6 +2619,7 @@
         initTheme();
         updateComposer();
         updateDemoProgress();
+        refreshHistory();
 
         if (demoMode) {
             els.demoBadge.hidden = false;
