@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UX Agent</title>
-<meta name="description" content="A guided UX discovery agent: one question at a time, until the brief is complete.">
+<meta name="description" content="{{ __('A guided UX discovery agent: one question at a time, until the brief is complete.') }}">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
     @font-face {
@@ -403,14 +403,12 @@
         word-wrap: break-word;
         overflow-wrap: anywhere;
         box-shadow: var(--shadow);
-        direction: rtl;
-        text-align: right;
     }
 
     .bubble > :first-child { margin-top: 0; }
     .bubble > :last-child { margin-bottom: 0; }
     .bubble p { margin: 8px 0; }
-    .bubble ul, .bubble ol { margin: 8px 0; padding-left: 22px; }
+    .bubble ul, .bubble ol { margin: 8px 0; padding-inline-start: 22px; }
     .bubble li { margin: 3px 0; }
     .bubble h1, .bubble h2, .bubble h3, .bubble h4 { margin: 14px 0 6px; line-height: 1.3; }
     .bubble h1 { font-size: 18px; }
@@ -419,8 +417,9 @@
     .bubble hr { border: none; border-top: 1px solid var(--line); margin: 14px 0; }
     .bubble blockquote {
         margin: 10px 0;
-        padding: 2px 0 2px 13px;
-        border-left: 3px solid var(--line-strong);
+        padding-block: 2px;
+        padding-inline-start: 13px;
+        border-inline-start: 3px solid var(--line-strong);
         color: var(--muted);
     }
     .bubble a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
@@ -614,7 +613,7 @@
 
     .doc-body h3 { font-size: 14px; margin: 16px 0 6px; }
     .doc-body p { margin: 9px 0; }
-    .doc-body ul, .doc-body ol { margin: 9px 0; padding-left: 22px; }
+    .doc-body ul, .doc-body ol { margin: 9px 0; padding-inline-start: 22px; }
     .doc-body li { margin: 4px 0; }
 
     .doc-body hr {
@@ -644,8 +643,9 @@
 
     .doc-body blockquote {
         margin: 12px 0;
-        padding: 2px 0 2px 14px;
-        border-left: 3px solid var(--line-strong);
+        padding-block: 2px;
+        padding-inline-start: 14px;
+        border-inline-start: 3px solid var(--line-strong);
         color: var(--muted);
     }
 
@@ -662,7 +662,7 @@
     .doc-body th, .doc-body td {
         border: 1px solid var(--line);
         padding: 8px 11px;
-        text-align: left;
+        text-align: start;
         vertical-align: top;
     }
 
@@ -671,7 +671,7 @@
     .check {
         color: var(--accent);
         font-family: var(--mono);
-        margin-right: 6px;
+        margin-inline-end: 6px;
         font-weight: 700;
     }
 
@@ -702,7 +702,7 @@
     .error.visible { display: flex; }
     .error svg { width: 15px; height: 15px; flex: 0 0 auto; margin-top: 2px; }
     .error-close {
-        margin-left: auto;
+        margin-inline-start: auto;
         border: none;
         background: transparent;
         color: inherit;
@@ -805,7 +805,7 @@
 
     #jump {
         position: absolute;
-        right: 22px;
+        inset-inline-end: 22px;
         bottom: 168px;
         width: 38px;
         height: 38px;
@@ -828,7 +828,7 @@
 
     .toast-wrap {
         position: fixed;
-        right: 20px;
+        inset-inline-end: 20px;
         bottom: 20px;
         display: flex;
         flex-direction: column;
@@ -859,7 +859,8 @@
 
     .history {
         position: fixed;
-        inset: 0 auto 0 0;
+        inset-block: 0;
+        inset-inline-start: 0;
         width: 300px;
         max-width: 88vw;
         display: flex;
@@ -867,9 +868,9 @@
         gap: 10px;
         padding: 16px 14px;
         background: var(--panel);
-        border-right: 1px solid var(--line);
+        border-inline-end: 1px solid var(--line);
         box-shadow: var(--shadow);
-        overflow-y: auto;
+        overflow: hidden;
         z-index: 40;
     }
 
@@ -892,6 +893,9 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
     }
 
     .history-item {
@@ -900,7 +904,7 @@
         align-items: flex-start;
         gap: 3px;
         width: 100%;
-        text-align: left;
+        text-align: start;
         padding: 9px 11px;
         background: var(--panel-2);
         border: 1px solid var(--line);
@@ -936,6 +940,10 @@
 
     .history-empty[hidden] { display: none; }
 
+    .history-new {
+        justify-content: center;
+    }
+
     /* ---------------------------------------------------------- responsive */
 
     @media (max-width: 720px) {
@@ -945,7 +953,7 @@
         .status-pill { padding: 5px 9px; }
         .msg-body { max-width: 88%; }
         .doc-body { padding: 18px 16px 22px; }
-        #jump { right: 16px; bottom: 176px; }
+        #jump { inset-inline-end: 16px; bottom: 176px; }
         .hint { display: none; }
     }
 
@@ -981,7 +989,7 @@
             <div class="brand-text">
                 <div class="brand-title">
                     UX Agent
-                    <span class="badge" id="demo-badge" hidden>Demo</span>
+                    <span class="badge" id="demo-badge" hidden>{{ __('Demo') }}</span>
                 </div>
                 <div class="brand-sub">One question at a time, until the brief is complete.</div>
             </div>
@@ -994,14 +1002,19 @@
                 </svg>
             </button>
 
-            <span class="cost-pill" id="cost" title="Spent in this chat (Toman)" aria-live="polite">0 تومان</span>
+            <span class="cost-pill" id="cost" title="{{ __('Spent in this chat (Toman)') }}" aria-live="polite">0 {{ __('Toman') }}</span>
 
             <span class="status-pill" id="status" data-state="idle" role="status" aria-live="polite">
                 <span class="status-dot" aria-hidden="true"></span>
-                <span class="status-text" id="status-text">Ready</span>
+                <span class="status-text" id="status-text">{{ __('Ready') }}</span>
             </span>
 
-            <button type="button" id="theme-toggle" class="icon ghost" title="Toggle light / dark theme" aria-label="Toggle light or dark theme">
+            <form method="GET" action="{{ route('chat.index') }}">
+                <input type="hidden" name="lang" value="{{ app()->getLocale() === 'fa' ? 'en' : 'fa' }}">
+                <button type="submit" class="ghost" title="{{ __('Switch language') }}" aria-label="{{ __('Switch language') }}">{{ app()->getLocale() === 'fa' ? 'EN' : 'FA' }}</button>
+            </form>
+
+            <button type="button" id="theme-toggle" class="icon ghost" title="{{ __('Toggle light / dark theme') }}" aria-label="{{ __('Toggle light or dark theme') }}">
                 <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="4"></circle>
                     <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
@@ -1011,27 +1024,28 @@
                 </svg>
             </button>
 
-            <button type="button" id="reset" class="ghost" title="Clear the conversation" aria-label="Reset conversation">
+            <button type="button" id="reset" class="ghost" title="{{ __('Clear the conversation') }}" aria-label="{{ __('Reset conversation') }}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
                     <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
                     <path d="M3 3v5h5"></path>
                 </svg>
-                Reset
+                {{ __('Reset') }}
             </button>
         </div>
     </header>
 
-    <aside class="history" id="history" hidden aria-label="Chat history">
+    <aside class="history" id="history" hidden aria-label="{{ __('Chat history') }}">
         <div class="history-head">
-            <span class="history-heading">Chats</span>
-            <button type="button" id="history-close" class="icon ghost" title="Close chat history" aria-label="Close chat history">
+            <span class="history-heading">{{ __('Chats') }}</span>
+            <button type="button" id="history-close" class="icon ghost" title="{{ __('Close chat history') }}" aria-label="{{ __('Close chat history') }}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 6l12 12M18 6L6 18"></path>
                 </svg>
             </button>
         </div>
+        <button type="button" id="history-new" class="primary">{{ __('New chat') }}</button>
+        <div class="history-empty" id="history-empty" hidden>{{ __('No saved chats yet.') }}</div>
         <div class="history-list" id="history-list"></div>
-        <div class="history-empty" id="history-empty" hidden>No saved chats yet.</div>
     </aside>
 
     <div class="progress-track" id="progress-track" hidden aria-hidden="true">
@@ -1040,7 +1054,7 @@
 
     <main id="messages" role="log" aria-live="polite" aria-label="Conversation" tabindex="-1"></main>
 
-    <button type="button" id="jump" class="ghost" title="Jump to the latest message" aria-label="Jump to the latest message">
+    <button type="button" id="jump" class="ghost" title="{{ __('Jump to the latest message') }}" aria-label="{{ __('Jump to the latest message') }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12 5v14M19 12l-7 7-7-7"></path>
         </svg>
@@ -1053,37 +1067,37 @@
                 <path d="M12 8v5M12 16.5v.01"></path>
             </svg>
             <span id="error-text"></span>
-            <button type="button" class="error-close" id="error-close" aria-label="Dismiss error">&times;</button>
+            <button type="button" class="error-close" id="error-close" aria-label="{{ __('Dismiss error') }}">&times;</button>
         </div>
 
-        <div class="chips" id="chips" aria-label="Example prompts"></div>
+        <div class="chips" id="chips" aria-label="{{ __('Example prompts') }}"></div>
 
         <div class="composer">
             <textarea
                 id="input"
                 rows="1"
                 maxlength="4000"
-                placeholder="Describe the idea or problem. Press Enter to send, Shift+Enter for a new line."
+                placeholder="{{ __('Describe the idea or problem. Press Enter to send, Shift+Enter for a new line.') }}"
                 autocomplete="off"
                 autocapitalize="sentences"
                 spellcheck="true"
-                aria-label="Message"
+                aria-label="{{ __('Message') }}"
             ></textarea>
-            <button type="button" id="send" class="primary">Send</button>
+            <button type="button" id="send" class="primary">{{ __('Send') }}</button>
         </div>
 
         <div class="footer-row">
             <span class="hint">
-                <kbd>Enter</kbd> send
-                <kbd>Shift</kbd>+<kbd>Enter</kbd> new line
-                <kbd>Ctrl</kbd>+<kbd>Enter</kbd> finalize
+                <kbd>Enter</kbd> {{ __('send') }}
+                <kbd>Shift</kbd>+<kbd>Enter</kbd> {{ __('new line') }}
+                <kbd>Ctrl</kbd>+<kbd>Enter</kbd> {{ __('finalize') }}
             </span>
-            <button type="button" id="finalize" title="Ask the agent to produce the final document">
+            <button type="button" id="finalize" title="{{ __('Ask the agent to produce the final document') }}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
                     <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
                     <path d="M14 3v5h5"></path>
                 </svg>
-                Finalize output
+                {{ __('Finalize output') }}
             </button>
         </div>
     </footer>
@@ -1093,7 +1107,7 @@
 
 <noscript>
     <div style="padding:24px;text-align:center;color:#e5544b;">
-        This interface requires JavaScript to run.
+        {{ __('This interface requires JavaScript to run.') }}
     </div>
 </noscript>
 
@@ -1104,6 +1118,8 @@
 -->
 @php($appRoutes = ["send" => route("chat.send"), "finalize" => route("chat.finalize"), "reset" => route("chat.reset"), "history" => route("chat.history")])
 <script type="application/json" id="app-routes">@json($appRoutes)</script>
+@php($appI18n = is_array($messages = trans('*')) ? $messages : [])
+<script type="application/json" id="app-i18n">@json($appI18n)</script>
 
 <script>
 (function () {
@@ -1146,6 +1162,26 @@
         CSRF = '';
     }
 
+    var I18N = readI18n();
+
+    function readI18n() {
+        var node = document.getElementById('app-i18n');
+        if (!node) {
+            return {};
+        }
+        try {
+            var parsed = JSON.parse(node.textContent.trim());
+
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (err) {
+            return {};
+        }
+    }
+
+    function t(key) {
+        return typeof I18N[key] === 'string' ? I18N[key] : key;
+    }
+
     var prefersReducedMotion = window.matchMedia
         ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
         : false;
@@ -1172,6 +1208,7 @@
         historyClose: document.getElementById('history-close'),
         historyList: document.getElementById('history-list'),
         historyEmpty: document.getElementById('history-empty'),
+        historyNew: document.getElementById('history-new'),
         progressTrack: document.getElementById('progress-track'),
         progressBar: document.getElementById('progress-bar'),
         chips: document.getElementById('chips'),
@@ -1191,9 +1228,9 @@
     };
 
     var SUGGESTIONS = [
-        'A habit tracker for new runners',
-        'Redesign the checkout flow for a grocery app',
-        'Onboarding for a developer tool'
+        t('A habit tracker for new runners'),
+        t('Redesign the checkout flow for a grocery app'),
+        t('Onboarding for a developer tool')
     ];
 
     /* =====================================================================
@@ -1606,11 +1643,11 @@
             }
         }
 
-        return 'New chat';
+        return t('New chat');
     }
 
     function formatCost(cost) {
-        return cost.toFixed(2) + ' تومان';
+        return cost.toFixed(2) + ' ' + t('Toman');
     }
 
     function renderCost() {
@@ -1642,7 +1679,7 @@
             cost.textContent = formatCost(chatCost(chat));
 
             var count = document.createElement('span');
-            count.textContent = ((chat.messages || []).length) + ' پیام';
+            count.textContent = ((chat.messages || []).length) + ' ' + t('messages');
 
             meta.appendChild(cost);
             meta.appendChild(count);
@@ -1775,6 +1812,11 @@
         toggleHistory(false);
     });
 
+    els.historyNew.addEventListener('click', function () {
+        toggleHistory(false);
+        handleReset();
+    });
+
     /* =====================================================================
        6. Toasts
        ===================================================================== */
@@ -1782,7 +1824,7 @@
     function toast(message, kind) {
         var el = document.createElement('div');
         el.className = 'toast' + (kind ? ' toast-' + kind : '');
-        el.textContent = message;
+        el.textContent = t(message);
         els.toasts.appendChild(el);
 
         window.requestAnimationFrame(function () {
@@ -1844,7 +1886,7 @@
        ===================================================================== */
 
     function setStatus(text, stateName) {
-        els.statusText.textContent = text;
+        els.statusText.textContent = t(text);
         els.status.setAttribute('data-state', stateName || 'idle');
     }
 
@@ -1854,7 +1896,7 @@
             els.error.classList.remove('visible');
             return;
         }
-        els.errorText.textContent = message;
+        els.errorText.textContent = t(message);
         els.error.classList.add('visible');
     }
 
@@ -2052,7 +2094,7 @@
         bubble.className = 'bubble';
         bubble.innerHTML =
             '<span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>' +
-            '<span class="typing-label">' + escapeHtml(label || 'Thinking') + '…</span>';
+            '<span class="typing-label">' + escapeHtml(t(label || 'Thinking')) + '…</span>';
 
         body.appendChild(bubble);
         row.appendChild(body);
@@ -2399,10 +2441,10 @@
     function updateComposer() {
         var busy = isBusy();
 
-        els.send.textContent = busy ? 'Stop' : 'Send';
+        els.send.textContent = busy ? t('Stop') : t('Send');
         els.send.classList.toggle('stop', busy);
         els.send.classList.toggle('primary', !busy);
-        els.send.setAttribute('aria-label', busy ? 'Stop the current request' : 'Send message');
+        els.send.setAttribute('aria-label', busy ? t('Stop the current request') : t('Send message'));
 
         els.finalize.disabled = busy;
         els.reset.disabled = busy;
@@ -2448,7 +2490,7 @@
                 typing.remove();
                 var replyText = data && typeof data.reply === 'string' ? data.reply : '';
                 if (!replyText) {
-                    replyText = 'I did not receive a reply. Please try again.';
+                    replyText = t('I did not receive a reply. Please try again.');
                 }
                 addMessage('assistant', replyText, { markdown: true });
                 trackChat(data, text, replyText);
@@ -2457,7 +2499,7 @@
             .catch(function (error) {
                 typing.remove();
                 if (error && error.name === 'AbortError') {
-                    addMessage('system', 'Request cancelled.');
+                    addMessage('system', t('Request cancelled.'));
                     setStatus('Ready', 'idle');
                     return;
                 }
@@ -2503,7 +2545,7 @@
                 if (!documentText) {
                     throw new Error('The agent returned an empty document.');
                 }
-                var title = (data && typeof data.title === 'string' && data.title) ? data.title : 'UX Brief';
+                var title = (data && typeof data.title === 'string' && data.title) ? data.title : t('UX Brief');
                 renderDocument(documentText, title);
                 syncCost(data);
                 setStatus('Done', 'idle');
@@ -2512,7 +2554,7 @@
             .catch(function (error) {
                 typing.remove();
                 if (error && error.name === 'AbortError') {
-                    addMessage('system', 'Finalize cancelled.');
+                    addMessage('system', t('Finalize cancelled.'));
                     setStatus('Ready', 'idle');
                     return;
                 }
@@ -2545,7 +2587,7 @@
             return;
         }
 
-        var confirmed = window.confirm('Reset the conversation? This clears every answer collected so far.');
+        var confirmed = window.confirm(t('Reset the conversation? This clears every answer collected so far.'));
         if (!confirmed) {
             return;
         }
@@ -2564,7 +2606,7 @@
                 updateDemoProgress();
                 addMessage(
                     'assistant',
-                    'Describe the idea or problem. I will ask one question at a time.',
+                    t('Describe the idea or problem. I will ask one question at a time.'),
                     { markdown: true, noTools: true }
                 );
                 setStatus('Ready', 'idle');
@@ -2652,7 +2694,7 @@
 
         addMessage(
             'assistant',
-            'Describe the idea or problem. I will ask one question at a time.',
+            t('Describe the idea or problem. I will ask one question at a time.'),
             { markdown: true, noTools: true }
         );
 

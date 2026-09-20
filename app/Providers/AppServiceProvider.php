@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $language = strtolower(trim((string) config('agent.language', 'en')));
+
+        App::setLocale(in_array($language, ['persian', 'farsi', 'fa', 'ir'], true) ? 'fa' : 'en');
     }
 }

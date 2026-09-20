@@ -15,6 +15,10 @@ class ChatController extends Controller
 {
     private const SESSION_KEY = 'ux_agent.history';
 
+    private const LOCALE_KEY = 'ux_agent.locale';
+
+    private const LOCALES = ['fa', 'en'];
+
     public function __construct(private readonly UXAgent $agent)
     {
     }
@@ -22,8 +26,20 @@ class ChatController extends Controller
     /**
      * Render the single-page UI.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
+        $requested = $request->query('lang');
+
+        if (is_string($requested) && in_array($requested, self::LOCALES, true)) {
+            $request->session()->put(self::LOCALE_KEY, $requested);
+        }
+
+        $locale = $request->session()->get(self::LOCALE_KEY);
+
+        if (is_string($locale) && in_array($locale, self::LOCALES, true)) {
+            app()->setLocale($locale);
+        }
+
         return view('chat');
     }
 
