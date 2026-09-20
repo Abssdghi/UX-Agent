@@ -379,6 +379,8 @@
         word-wrap: break-word;
         overflow-wrap: anywhere;
         box-shadow: var(--shadow);
+        direction: rtl;
+        text-align: right;
     }
 
     .bubble > :first-child { margin-top: 0; }
@@ -2185,7 +2187,6 @@
             .then(function () {
                 els.messages.innerHTML = '';
                 state.started = false;
-                renderChips();
                 updateDemoProgress();
                 addMessage(
                     'assistant',
