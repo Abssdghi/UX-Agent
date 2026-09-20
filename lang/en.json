@@ -1,5 +1,6 @@
 {
     "A guided UX discovery agent: one question at a time, until the brief is complete.": "A guided UX discovery agent: one question at a time, until the brief is complete.",
+    "One question at a time, until the brief is complete.": "One question at a time, until the brief is complete.",
     "Demo": "Demo",
     "Switch language": "Switch language",
     "Spent in this chat (Toman)": "Spent in this chat (Toman)",
@@ -45,6 +46,7 @@
     "I did not receive a reply. Please try again.": "I did not receive a reply. Please try again.",
     "The agent returned an empty document.": "The agent returned an empty document.",
     "Could not reset the conversation.": "Could not reset the conversation.",
+    "Answer at least one question before finalizing.": "Answer at least one question before finalizing.",
     "UX Brief": "UX Brief",
     "messages": "messages",
     "Toman": "Toman",

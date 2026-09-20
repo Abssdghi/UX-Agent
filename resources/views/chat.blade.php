@@ -995,7 +995,7 @@
                     UX Agent
                     <span class="badge" id="demo-badge" hidden>{{ __('Demo') }}</span>
                 </div>
-                <div class="brand-sub">One question at a time, until the brief is complete.</div>
+                <div class="brand-sub">{{ __('One question at a time, until the brief is complete.') }}</div>
             </div>
         </div>
 

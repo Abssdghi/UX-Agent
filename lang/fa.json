@@ -1,5 +1,6 @@
 {
     "A guided UX discovery agent: one question at a time, until the brief is complete.": "ایجنت کشف UX: هر بار یک پرسش، تا کامل شدن بریف.",
+    "One question at a time, until the brief is complete.": "هر بار یک پرسش، تا کامل شدن بریف.",
     "Demo": "دمو",
     "Switch language": "تغییر زبان",
     "Spent in this chat (Toman)": "هزینه‌ی این گفتگو (تومان)",
@@ -45,11 +46,12 @@
     "I did not receive a reply. Please try again.": "پاسخی دریافت نشد. دوباره تلاش کنید.",
     "The agent returned an empty document.": "ایجنت سند خالی برگرداند.",
     "Could not reset the conversation.": "شروع دوباره‌ی گفتگو انجام نشد.",
+    "Answer at least one question before finalizing.": "پیش از ساخت سند، دست‌کم به یک پرسش پاسخ بدهید.",
     "UX Brief": "بریف UX",
     "messages": "پیام",
     "Toman": "تومان",
     "Describe the idea or problem. I will ask one question at a time.": "ایده یا مشکل را توضیح بده. هر بار یک پرسش می‌پرسم.",
-    "Reset the conversation? This clears every answer collected so far.": "گفتگو از نو شروع شود؟ همه‌ی پاسخ‌های ثبت‌شده پاک می‌شود.",
+    "Reset the conversation? This clears every answer collected so far.": "گفتگو از نو شروع شود؟",
     "A habit tracker for new runners": "یک اپلیکیشن عادت‌یاب برای دوندگان تازه‌کار",
     "Redesign the checkout flow for a grocery app": "بازطراحی فرآیند پرداخت یک اپلیکیشن خرید مواد غذایی",
     "Onboarding for a developer tool": "آنبوردینگ یک ابزار توسعه‌دهنده"
