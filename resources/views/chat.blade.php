@@ -348,6 +348,7 @@
         scrollbar-width: thin;
         scrollbar-color: var(--line-strong) transparent;
         overscroll-behavior: contain;
+        direction: ltr;
     }
 
     #messages::-webkit-scrollbar { width: 10px; }
@@ -404,6 +405,9 @@
         overflow-wrap: anywhere;
         box-shadow: var(--shadow);
     }
+
+    html[dir="rtl"] .bubble,
+    html[dir="rtl"] .doc-body { direction: rtl; }
 
     .bubble > :first-child { margin-top: 0; }
     .bubble > :last-child { margin-bottom: 0; }
