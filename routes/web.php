@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ChatController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [ChatController::class, 'index'])->name('chat.index');
+Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
+Route::post('/chat/finalize', [ChatController::class, 'finalize'])->name('chat.finalize');
+Route::post('/chat/reset', [ChatController::class, 'reset'])->name('chat.reset');
