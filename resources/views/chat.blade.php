@@ -7,6 +7,30 @@
 <meta name="description" content="A guided UX discovery agent: one question at a time, until the brief is complete.">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
+    @font-face {
+        font-family: 'Vazirmatn';
+        src: url('{{ asset('assets/fonts/Vazirmatn-UI-FD-Light.ttf') }}') format('truetype');
+        font-weight: 300;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    @font-face {
+        font-family: 'Vazirmatn';
+        src: url('{{ asset('assets/fonts/Vazirmatn-UI-FD-Regular.ttf') }}') format('truetype');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    @font-face {
+        font-family: 'Vazirmatn';
+        src: url('{{ asset('assets/fonts/Vazirmatn-UI-FD-Bold.ttf') }}') format('truetype');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+    }
+
     :root {
         color-scheme: dark;
 
@@ -29,7 +53,7 @@
         --shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.9);
         --radius: 14px;
         --radius-sm: 9px;
-        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --font: 'Vazirmatn', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     }
 
