@@ -267,6 +267,20 @@
         box-shadow: 0 0 0 3px var(--danger-soft);
     }
 
+    .cost-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+        padding: 5px 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        white-space: nowrap;
+    }
+
     @keyframes pulse {
         0%, 100% { opacity: 1; transform: scale(1); }
         50% { opacity: .45; transform: scale(.8); }
@@ -867,6 +881,8 @@
         </div>
 
         <div class="header-actions">
+            <span class="cost-pill" id="cost" title="Total spent so far (Toman)" aria-live="polite">0 تومان</span>
+
             <span class="status-pill" id="status" data-state="idle" role="status" aria-live="polite">
                 <span class="status-dot" aria-hidden="true"></span>
                 <span class="status-text" id="status-text">Ready</span>
@@ -1023,6 +1039,7 @@
         errorClose: document.getElementById('error-close'),
         status: document.getElementById('status'),
         statusText: document.getElementById('status-text'),
+        cost: document.getElementById('cost'),
         progressTrack: document.getElementById('progress-track'),
         progressBar: document.getElementById('progress-bar'),
         chips: document.getElementById('chips'),
@@ -1035,7 +1052,8 @@
         sending: false,
         finalizing: false,
         controller: null,
-        started: false
+        started: false,
+        cost: 0
     };
 
     var SUGGESTIONS = [
@@ -1361,6 +1379,44 @@
         var current = document.documentElement.getAttribute('data-theme');
         applyTheme(current === 'light' ? 'dark' : 'light');
     });
+
+    /* =====================================================================
+       Cost tracking
+       ===================================================================== */
+
+    var COST_KEY = 'ux-agent-cost';
+
+    function readCost() {
+        var stored = null;
+        try {
+            stored = window.localStorage.getItem(COST_KEY);
+        } catch (err) {
+            stored = null;
+        }
+        var value = parseFloat(stored);
+        return isFinite(value) && value > 0 ? value : 0;
+    }
+
+    function renderCost() {
+        els.cost.textContent = state.cost.toFixed(2) + ' تومان';
+    }
+
+    function addCost(cost) {
+        var value = parseFloat(cost);
+        if (!isFinite(value) || value <= 0) {
+            return;
+        }
+        state.cost += value;
+        try {
+            window.localStorage.setItem(COST_KEY, String(state.cost));
+        } catch (err) {
+            /* storage unavailable — ignore */
+        }
+        renderCost();
+    }
+
+    state.cost = readCost();
+    renderCost();
 
     /* =====================================================================
        6. Toasts
@@ -2022,6 +2078,7 @@
                     replyText = 'I did not receive a reply. Please try again.';
                 }
                 addMessage('assistant', replyText, { markdown: true });
+                addCost(data && data.cost);
                 setStatus('Ready', 'idle');
             })
             .catch(function (error) {
@@ -2075,6 +2132,7 @@
                 }
                 var title = (data && typeof data.title === 'string' && data.title) ? data.title : 'UX Brief';
                 renderDocument(documentText, title);
+                addCost(data && data.cost);
                 setStatus('Done', 'idle');
                 toast('Brief generated', 'ok');
             })

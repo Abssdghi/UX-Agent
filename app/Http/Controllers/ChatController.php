@@ -58,6 +58,7 @@ class ChatController extends Controller
         return response()->json([
             'ok' => true,
             'reply' => $reply,
+            'cost' => $this->agent->cost(),
         ]);
     }
 
@@ -87,6 +88,7 @@ class ChatController extends Controller
         return response()->json([
             'ok' => true,
             'document' => $document,
+            'cost' => $this->agent->cost(),
         ]);
     }
 

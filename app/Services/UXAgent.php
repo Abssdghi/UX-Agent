@@ -472,6 +472,19 @@ PROMPT;
     private const FINALIZE_INSTRUCTION = 'Produce the final output document now. Follow the exact structure defined in the system prompt. Output only the document, in the configured output language.';
 
     /**
+     * Cost in Toman reported by the provider for the most recent call.
+     */
+    private ?float $cost = null;
+
+    /**
+     * Cost in Toman reported by the provider for the most recent call.
+     */
+    public function cost(): ?float
+    {
+        return $this->cost;
+    }
+
+    /**
      * Send the conversation history and get the next interviewer reply.
      *
      * @param  array<int, array{role: string, content: string}>  $history
@@ -554,6 +567,9 @@ PROMPT;
         if (!is_string($content) || trim($content) === '') {
             throw new RuntimeException('LLM returned an empty or malformed response.');
         }
+
+        $cost = $data['estimated_cost']['irt'] ?? null;
+        $this->cost = is_numeric($cost) ? (float) $cost : null;
 
         return trim($content);
     }
