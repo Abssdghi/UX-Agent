@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" data-theme="dark">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}" data-lang="{{ app()->getLocale() === 'fa' ? 'fa-IR' : 'en-US' }}" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -777,6 +777,21 @@
     textarea#input::placeholder { color: var(--muted); }
     textarea#input:disabled { opacity: .55; }
 
+    #mic { flex: 0 0 auto; }
+    #mic[hidden] { display: none; }
+
+    #mic.recording {
+        background: var(--danger-soft);
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    #mic.recording:hover:not(:disabled) {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: #fff;
+    }
+
     .footer-row {
         display: flex;
         align-items: center;
@@ -1087,6 +1102,13 @@
                 spellcheck="true"
                 aria-label="{{ __('Message') }}"
             ></textarea>
+            <button type="button" id="mic" class="ghost icon" hidden title="{{ __('Dictate') }}" aria-label="{{ __('Dictate') }}" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
+                    <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"></path>
+                    <path d="M5 11a7 7 0 0 0 14 0"></path>
+                    <path d="M12 18v3"></path>
+                </svg>
+            </button>
             <button type="button" id="send" class="primary">{{ __('Send') }}</button>
         </div>
 
@@ -1197,6 +1219,7 @@
     var els = {
         messages: document.getElementById('messages'),
         input: document.getElementById('input'),
+        mic: document.getElementById('mic'),
         send: document.getElementById('send'),
         finalize: document.getElementById('finalize'),
         reset: document.getElementById('reset'),
@@ -1228,7 +1251,8 @@
         started: false,
         cost: 0,
         chats: [],
-        chatId: null
+        chatId: null,
+        dictating: false
     };
 
     var SUGGESTIONS = [
@@ -2452,6 +2476,154 @@
 
         els.finalize.disabled = busy;
         els.reset.disabled = busy;
+        els.mic.disabled = busy;
+
+        if (busy) {
+            stopDictation();
+        }
+    }
+
+    /* ------------------------------------------------------------ dictation */
+
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var recognition = null;
+    var committed = '';
+
+    function speechLocale() {
+        return document.documentElement.getAttribute('data-lang') || 'en-US';
+    }
+
+    function setDictating(on) {
+        els.mic.classList.toggle('recording', on);
+        els.mic.setAttribute('aria-pressed', on ? 'true' : 'false');
+        els.mic.title = on ? t('Stop dictation') : t('Dictate');
+        els.mic.setAttribute('aria-label', els.mic.title);
+    }
+
+    function writeDictation(text) {
+        var value = text.slice(0, MAX_LENGTH);
+
+        if (els.input.value === value) {
+            return;
+        }
+
+        els.input.value = value;
+        autosize();
+        els.input.scrollTop = els.input.scrollHeight;
+    }
+
+    function startDictation() {
+        if (!recognition || state.dictating || isBusy()) {
+            return;
+        }
+
+        if (els.input.value.length >= MAX_LENGTH) {
+            setError('Messages are limited to ' + MAX_LENGTH + ' characters.');
+            return;
+        }
+
+        committed = els.input.value;
+        state.dictating = true;
+        setDictating(true);
+
+        try {
+            recognition.start();
+        } catch (err) {
+            stopDictation();
+        }
+    }
+
+    function stopDictation() {
+        if (!state.dictating) {
+            return;
+        }
+
+        state.dictating = false;
+        committed = '';
+        setDictating(false);
+
+        try {
+            recognition.stop();
+        } catch (err) {
+            /* already stopped */
+        }
+    }
+
+    function onDictationResult(event) {
+        var interim = '';
+
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+            var chunk = event.results[i][0].transcript;
+
+            if (event.results[i].isFinal) {
+                committed += chunk;
+            } else {
+                interim += chunk;
+            }
+        }
+
+        writeDictation(committed + interim);
+    }
+
+    function initDictation() {
+        /* Firefox has no SpeechRecognition: the button stays hidden. */
+        if (!SpeechRecognition || !els.mic) {
+            return;
+        }
+
+        recognition = new SpeechRecognition();
+        recognition.lang = speechLocale();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = onDictationResult;
+
+        recognition.onerror = function (event) {
+            var reason = event && event.error ? event.error : '';
+
+            /* Silence is not a failure: onend restarts while the user is listening. */
+            if (reason === 'no-speech') {
+                return;
+            }
+
+            state.dictating = false;
+            setDictating(false);
+
+            if (reason === 'aborted') {
+                return;
+            }
+
+            if (reason === 'not-allowed' || reason === 'service-not-allowed') {
+                setError('Microphone access was blocked.');
+                return;
+            }
+
+            setError('Dictation failed. Please try again.');
+        };
+
+        recognition.onend = function () {
+            /* Chrome ends the session after a pause: restart while listening. */
+            if (state.dictating) {
+                try {
+                    recognition.start();
+                } catch (err) {
+                    stopDictation();
+                }
+                return;
+            }
+
+            setDictating(false);
+        };
+
+        els.mic.addEventListener('click', function () {
+            if (state.dictating) {
+                stopDictation();
+            } else {
+                startDictation();
+            }
+        });
+
+        els.mic.hidden = false;
     }
 
     /* =====================================================================
@@ -2667,10 +2839,26 @@
         }
     });
 
-    els.input.addEventListener('input', autosize);
+    els.input.addEventListener('input', function () {
+        /* Typing during dictation takes over and keeps what the user wrote. */
+        if (state.dictating) {
+            stopDictation();
+        }
+
+        autosize();
+    });
 
     document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && isBusy()) {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        if (state.dictating) {
+            stopDictation();
+            return;
+        }
+
+        if (isBusy()) {
             handleCancel();
         }
     });
@@ -2687,6 +2875,7 @@
 
     function boot() {
         initTheme();
+        initDictation();
         updateComposer();
         updateDemoProgress();
         refreshHistory();
