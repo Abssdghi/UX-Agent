@@ -57,6 +57,8 @@ AGENT_LANGUAGE=persian                     # language the agent speaks and write
 
 <!-- > `.env.example` ships pointing at `https://api.avalai.ir/v1`, which is why the cost counter reports **Toman**. The `estimated_cost.irt` field it reads is provider-specific; on plain OpenAI the counter simply stays at `0`. -->
 
+<!--
 ## License
 
-MIT (see `composer.json`; no standalone `LICENSE` file is included yet).
+MIT
+-->
