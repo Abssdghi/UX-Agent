@@ -110,7 +110,7 @@
                 id="input"
                 rows="1"
                 maxlength="4000"
-                placeholder="{{ __('Describe the idea or problem. Press Enter to send, Shift+Enter for a new line.') }}"
+                placeholder=""
                 autocomplete="off"
                 autocapitalize="sentences"
                 spellcheck="true"

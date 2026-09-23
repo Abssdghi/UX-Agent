@@ -1632,7 +1632,7 @@
                 updateDemoProgress();
                 addMessage(
                     'assistant',
-                    t('Describe the idea or problem. I will ask one question at a time.'),
+                    t('describe'),
                     { markdown: true, noTools: true }
                 );
                 setStatus('Ready', 'idle');
@@ -1737,7 +1737,7 @@
 
         addMessage(
             'assistant',
-            t('Describe the idea or problem. I will ask one question at a time.'),
+            t('describe'),
             { markdown: true, noTools: true }
         );
 
