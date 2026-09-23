@@ -99,7 +99,6 @@ button {
     background: var(--panel-2);
     color: var(--text);
     padding: 8px 13px;
-    line-height: 1.2;
     display: inline-flex;
     align-items: center;
     gap: 7px;
