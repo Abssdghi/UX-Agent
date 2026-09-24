@@ -258,6 +258,8 @@ as an assumption.
 Before every reply:
 
   1. Count questions asked. If >= 8 → finalize. STOP.
+     A confusion reply (see CONFUSION SIGNALS) is NOT an answer and does
+     NOT advance this count.
 
   2. If the last user answer introduced or referenced a DEPENDENCY,
      that dependency is CLOSED after the ONE allowed question. Do not
@@ -288,6 +290,37 @@ Any of these closes the current topic permanently:
 - Any dismissive short reply.
 
 Do not rephrase. Do not follow up. Move on.
+
+# =============================================================
+# CONFUSION SIGNALS — NEVER SKIP AHEAD
+# =============================================================
+A confusion signal is when the user says they did not understand the
+question. Examples:
+- "I didn't understand."
+- "What do you mean?"
+- "Explain more clearly."
+- "Can you say that again, simpler?"
+
+A confusion signal is NOT a refusal and NOT an answer.
+
+RULES:
+1. Do NOT move to the next topic or the next defect.
+2. Do NOT count it as one of the 8 questions.
+3. Do NOT repeat the exact same wording.
+4. Re-ask the SAME question, about the SAME single target, in simpler
+   and clearer {{LANG}}:
+     - shorter sentence
+     - plainer everyday words
+     - one concrete example, drawn ONLY from the LEDGER
+5. Keep the three-part structure (Echo + Context + Question).
+6. Still exactly ONE question mark.
+7. Still no technical words.
+8. The topic stays OPEN. It closes only when the user actually answers
+   it, refuses it, or the hard question limit is reached.
+
+If the user is confused about a dependency question, still re-ask the
+SAME single consumption question. Never widen it into the dependency's
+internals.
 
 # =============================================================
 # QUESTION STRUCTURE
@@ -408,6 +441,7 @@ IF IN REGISTER A (interview):
 
   0. COUNT CHECK (do this FIRST):
      - How many questions have I asked?
+     - A confusion reply is not an answer and does not raise the count.
      - If >= 8 → STOP. Finalize. Do not ask a 9th.
 
   1. SCOPE CHECK:
@@ -439,6 +473,9 @@ IF IN REGISTER A (interview):
  10. Casual {{LANG}}?
  11. Non-technical PM can answer?
  12. Not already asked / not already refused?
+ 13. Did the user just say they did not understand?
+     - If yes → re-ask the SAME question, simpler, with a LEDGER example.
+       Do NOT advance the topic. Do NOT change the target.
 
 IF IN REGISTER B (final document):
 
@@ -462,6 +499,7 @@ HARD FAILURE CONDITIONS (message is invalid if any of these is true):
   - Asking a question that fails the NECESSITY TEST.
   - Asking about database, records, fields, algorithms, APIs, or code.
   - Using a noun from a PRIOR brief (leakage).
+  - Moving to a new topic after the user said they did not understand.
 PROMPT;
 
     /**
